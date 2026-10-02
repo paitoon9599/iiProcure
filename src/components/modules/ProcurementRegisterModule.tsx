@@ -1,17 +1,25 @@
 import React, { useState } from 'react';
-import { BookOpen, Download, Printer, Search, Filter } from 'lucide-react';
-import { ProcurementTask } from '../../types';
+import { BookOpen, Download, Printer, Search, Filter, Plus, Edit2, Trash2, Eye } from 'lucide-react';
+import { ProcurementTask, SchoolProfile } from '../../types';
 
 interface ProcurementRegisterModuleProps {
   tasks: ProcurementTask[];
   fiscalYear: number;
   onSelectTask: (task: ProcurementTask) => void;
+  schoolProfile?: SchoolProfile;
+  onAddNewTask?: () => void;
+  onEditTask?: (task: ProcurementTask) => void;
+  onDeleteTask?: (taskId: string) => void;
 }
 
 export const ProcurementRegisterModule: React.FC<ProcurementRegisterModuleProps> = ({
   tasks,
   fiscalYear,
   onSelectTask,
+  schoolProfile,
+  onAddNewTask,
+  onEditTask,
+  onDeleteTask,
 }) => {
   const [filterType, setFilterType] = useState('all');
   const [search, setSearch] = useState('');
@@ -67,13 +75,18 @@ export const ProcurementRegisterModule: React.FC<ProcurementRegisterModuleProps>
             <h2 className="text-2xl font-bold text-slate-900 font-['Kanit',sans-serif]">
               ทะเบียนคุมจัดซื้อจัดจ้าง
             </h2>
+            {schoolProfile && (
+              <span className="hidden sm:inline-block text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                {schoolProfile.schoolName}
+              </span>
+            )}
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            โรงเรียนบ้านนิคมสายโท 12 เหนือ • ทะเบียนคุมการจัดซื้อจัดจ้างและการบริหารพัสดุภาครัฐ ประจำปีงบประมาณ {fiscalYear}
+            {schoolProfile?.schoolName || 'โรงเรียนบ้านนิคมสายโท 12 เหนือ'} • ทะเบียนคุมการจัดซื้อจัดจ้างและการบริหารพัสดุภาครัฐ ประจำปีงบประมาณ {fiscalYear}
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => window.print()}
             className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
@@ -83,11 +96,20 @@ export const ProcurementRegisterModule: React.FC<ProcurementRegisterModuleProps>
           </button>
           <button
             onClick={handleExportCSV}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>ส่งออก Excel/CSV</span>
+            <span>ส่งออก CSV</span>
           </button>
+          {onAddNewTask && (
+            <button
+              onClick={onAddNewTask}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>+ เพิ่มลงทะเบียนคุม</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -222,12 +244,37 @@ export const ProcurementRegisterModule: React.FC<ProcurementRegisterModuleProps>
                       )}
                     </td>
                     <td className="p-3 text-center whitespace-nowrap">
-                      <button
-                        onClick={() => onSelectTask(task)}
-                        className="text-blue-600 hover:text-blue-800 font-medium hover:underline cursor-pointer"
-                      >
-                        พิมพ์/ดู
-                      </button>
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          onClick={() => onSelectTask(task)}
+                          className="text-blue-600 hover:text-blue-800 font-medium hover:underline cursor-pointer"
+                          title="ดูรายละเอียด/พิมพ์"
+                        >
+                          พิมพ์/ดู
+                        </button>
+                        {onEditTask && (
+                          <button
+                            onClick={() => onEditTask(task)}
+                            className="p-1 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-md transition-colors cursor-pointer"
+                            title="แก้ไขรายการ"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {onDeleteTask && (
+                          <button
+                            onClick={() => {
+                              if (confirm(`คุณต้องการลบรายการ "${task.title}" หรือไม่?`)) {
+                                onDeleteTask(task.id);
+                              }
+                            }}
+                            className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
+                            title="ลบรายการ"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))

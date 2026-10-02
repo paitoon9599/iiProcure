@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import {
   ModuleId,
   ProcurementTask,
+  TaskType,
   MaterialItem,
   RequisitionSlip,
   BorrowRecord,
@@ -38,6 +39,7 @@ import { HomeDashboard } from './components/HomeDashboard';
 import { WizardModal } from './components/WizardModal';
 import { FollowUpModal } from './components/FollowUpModal';
 import { ProjectDetailModal } from './components/ProjectDetailModal';
+import { TaskFormModal } from './components/TaskFormModal';
 import { ProcurementModule } from './components/modules/ProcurementModule';
 import { ProcurementRegisterModule } from './components/modules/ProcurementRegisterModule';
 import { W804Module } from './components/modules/W804Module';
@@ -165,22 +167,43 @@ export default function App() {
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [isAlertsOpen, setIsAlertsOpen] = useState(false);
   const [selectedTaskForDetail, setSelectedTaskForDetail] = useState<ProcurementTask | null>(null);
+  const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<ProcurementTask | null>(null);
+  const [defaultTaskType, setDefaultTaskType] = useState<TaskType>('purchase');
 
-  // Handlers for Procurement
-  const handleSaveNewTask = (newTask: ProcurementTask) => {
-    setTasks((prev) => [newTask, ...prev]);
+  // Task open actions
+  const handleOpenAddTask = (type?: TaskType) => {
+    setDefaultTaskType(type || 'purchase');
+    setEditingTask(null);
+    setIsTaskFormOpen(true);
+  };
 
-    // If linked to an approved project, update project's and activity's spent budget
-    if (newTask.projectId) {
+  const handleOpenEditTask = (task: ProcurementTask) => {
+    setEditingTask(task);
+    setIsTaskFormOpen(true);
+  };
+
+  // Handlers for Procurement Tasks (Create / Update / Delete)
+  const handleSaveTask = (savedTask: ProcurementTask) => {
+    const existing = tasks.find((t) => t.id === savedTask.id);
+    if (existing) {
+      setTasks((prev) => prev.map((t) => (t.id === savedTask.id ? savedTask : t)));
+    } else {
+      setTasks((prev) => [savedTask, ...prev]);
+    }
+
+    // Update project budget
+    if (savedTask.projectId) {
+      const delta = existing ? savedTask.amount - existing.amount : savedTask.amount;
       setProjects((prev) =>
         prev.map((p) => {
-          if (p.id === newTask.projectId) {
+          if (p.id === savedTask.projectId) {
             return {
               ...p,
-              spentBudget: p.spentBudget + newTask.amount,
+              spentBudget: Math.max(0, p.spentBudget + delta),
               activities: p.activities.map((a) =>
-                a.id === newTask.activityId
-                  ? { ...a, spentBudget: a.spentBudget + newTask.amount }
+                a.id === savedTask.activityId
+                  ? { ...a, spentBudget: Math.max(0, a.spentBudget + delta) }
                   : a
               ),
             };
@@ -189,6 +212,36 @@ export default function App() {
         })
       );
     }
+  };
+
+  const handleDeleteTask = (taskId: string) => {
+    const taskToDelete = tasks.find((t) => t.id === taskId);
+    setTasks((prev) => prev.filter((t) => t.id !== taskId));
+    if (selectedTaskForDetail?.id === taskId) {
+      setSelectedTaskForDetail(null);
+    }
+    if (taskToDelete?.projectId) {
+      setProjects((prev) =>
+        prev.map((p) => {
+          if (p.id === taskToDelete.projectId) {
+            return {
+              ...p,
+              spentBudget: Math.max(0, p.spentBudget - taskToDelete.amount),
+              activities: p.activities.map((a) =>
+                a.id === taskToDelete.activityId
+                  ? { ...a, spentBudget: Math.max(0, a.spentBudget - taskToDelete.amount) }
+                  : a
+              ),
+            };
+          }
+          return p;
+        })
+      );
+    }
+  };
+
+  const handleSaveNewTask = (newTask: ProcurementTask) => {
+    handleSaveTask(newTask);
   };
 
   const handleUpdateTaskStatus = (
@@ -218,8 +271,24 @@ export default function App() {
     setMaterials((prev) => [...prev, newMat]);
   };
 
+  const handleUpdateMaterial = (mat: MaterialItem) => {
+    setMaterials((prev) => prev.map((m) => (m.id === mat.id ? mat : m)));
+  };
+
+  const handleDeleteMaterial = (id: string) => {
+    setMaterials((prev) => prev.filter((m) => m.id !== id));
+  };
+
   const handleAddRequisition = (newReq: RequisitionSlip) => {
     setRequisitions((prev) => [newReq, ...prev]);
+  };
+
+  const handleUpdateRequisition = (req: RequisitionSlip) => {
+    setRequisitions((prev) => prev.map((r) => (r.id === req.id ? req : r)));
+  };
+
+  const handleDeleteRequisition = (id: string) => {
+    setRequisitions((prev) => prev.filter((r) => r.id !== id));
   };
 
   const handleUpdateRequisitionStatus = (id: string, status: RequisitionSlip['status']) => {
@@ -245,6 +314,14 @@ export default function App() {
     setBorrows((prev) => [newBorrow, ...prev]);
   };
 
+  const handleUpdateBorrow = (rec: BorrowRecord) => {
+    setBorrows((prev) => prev.map((b) => (b.id === rec.id ? rec : b)));
+  };
+
+  const handleDeleteBorrow = (id: string) => {
+    setBorrows((prev) => prev.filter((b) => b.id !== id));
+  };
+
   const handleReturnBorrow = (id: string) => {
     setBorrows((prev) =>
       prev.map((b) =>
@@ -264,19 +341,47 @@ export default function App() {
     setAssets((prev) => [newAsset, ...prev]);
   };
 
+  const handleUpdateAsset = (asset: FixedAsset) => {
+    setAssets((prev) => prev.map((a) => (a.id === asset.id ? asset : a)));
+  };
+
+  const handleDeleteAsset = (id: string) => {
+    setAssets((prev) => prev.filter((a) => a.id !== id));
+  };
+
   const handleAddTextbook = (newBook: TextbookRecord) => {
     setTextbooks((prev) => [...prev, newBook]);
+  };
+
+  const handleUpdateTextbook = (book: TextbookRecord) => {
+    setTextbooks((prev) => prev.map((b) => (b.id === book.id ? book : b)));
+  };
+
+  const handleDeleteTextbook = (id: string) => {
+    setTextbooks((prev) => prev.filter((b) => b.id !== id));
   };
 
   const handleUpdateTextbookStatus = (id: string, status: TextbookRecord['status']) => {
     setTextbooks((prev) => prev.map((b) => (b.id === id ? { ...b, status } : b)));
   };
 
+  const handleAddAuditItem = (item: AuditItem) => {
+    setAuditItems((prev) => [item, ...prev]);
+  };
+
+  const handleUpdateAuditItem = (item: AuditItem) => {
+    setAuditItems((prev) => prev.map((a) => (a.id === item.id ? item : a)));
+  };
+
+  const handleDeleteAuditItem = (id: string) => {
+    setAuditItems((prev) => prev.filter((a) => a.id !== id));
+  };
+
   const handleUpdateAuditStatus = (id: string, status: AuditItem['status']) => {
     setAuditItems((prev) => prev.map((a) => (a.id === id ? { ...a, status } : a)));
   };
 
-  // Staff and Project Handlers
+  // Staff Handlers
   const handleAddStaff = (newStaff: StaffPersonnel) => {
     setStaffList((prev) => [...prev, newStaff]);
   };
@@ -285,8 +390,21 @@ export default function App() {
     setStaffList((prev) => prev.map((s) => (s.id === updatedStaff.id ? updatedStaff : s)));
   };
 
+  const handleDeleteStaff = (staffId: string) => {
+    setStaffList((prev) => prev.filter((s) => s.id !== staffId));
+  };
+
+  // Project Handlers
   const handleAddProject = (newProject: ApprovedProject) => {
     setProjects((prev) => [newProject, ...prev]);
+  };
+
+  const handleUpdateProject = (proj: ApprovedProject) => {
+    setProjects((prev) => prev.map((p) => (p.id === proj.id ? proj : p)));
+  };
+
+  const handleDeleteProject = (projId: string) => {
+    setProjects((prev) => prev.filter((p) => p.id !== projId));
   };
 
   const handleAddActivity = (projectId: string, activity: ProjectActivity) => {
@@ -300,6 +418,32 @@ export default function App() {
         }
         return p;
       })
+    );
+  };
+
+  const handleUpdateActivity = (projectId: string, activity: ProjectActivity) => {
+    setProjects((prev) =>
+      prev.map((p) =>
+        p.id === projectId
+          ? {
+              ...p,
+              activities: p.activities.map((a) => (a.id === activity.id ? activity : a)),
+            }
+          : p
+      )
+    );
+  };
+
+  const handleDeleteActivity = (projectId: string, activityId: string) => {
+    setProjects((prev) =>
+      prev.map((p) =>
+        p.id === projectId
+          ? {
+              ...p,
+              activities: p.activities.filter((a) => a.id !== activityId),
+            }
+          : p
+      )
     );
   };
 
@@ -395,6 +539,7 @@ export default function App() {
           onClose={() => setSidebarOpen(false)}
           overdueCount={overdueCount}
           pendingRequisitionCount={pendingRequisitionCount}
+          schoolName={schoolProfile.schoolName}
         />
 
         {/* Main Content Area */}
@@ -404,6 +549,7 @@ export default function App() {
             activeModule={activeModule}
             fiscalYear={fiscalYear}
             onFiscalYearChange={(year) => setFiscalYear(year)}
+            schoolName={schoolProfile.schoolName}
           />
 
           <main className="flex-1 p-4 sm:p-6 lg:p-7 max-w-7xl w-full mx-auto">
@@ -414,7 +560,11 @@ export default function App() {
                 onOpenWizard={() => setIsWizardOpen(true)}
                 onOpenAlerts={() => setIsAlertsOpen(true)}
                 onSelectTask={(task) => setSelectedTaskForDetail(task)}
+                onAddNewTask={() => handleOpenAddTask('purchase')}
+                onEditTask={handleOpenEditTask}
+                onDeleteTask={handleDeleteTask}
                 fiscalYear={fiscalYear}
+                schoolProfile={schoolProfile}
               />
             )}
 
@@ -426,6 +576,10 @@ export default function App() {
                 tasks={tasks}
                 onSelectTask={(task) => setSelectedTaskForDetail(task)}
                 onOpenWizard={() => setIsWizardOpen(true)}
+                onAddNewTask={() => handleOpenAddTask('purchase')}
+                onEditTask={handleOpenEditTask}
+                onDeleteTask={handleDeleteTask}
+                schoolProfile={schoolProfile}
               />
             )}
 
@@ -437,6 +591,10 @@ export default function App() {
                 tasks={tasks}
                 onSelectTask={(task) => setSelectedTaskForDetail(task)}
                 onOpenWizard={() => setIsWizardOpen(true)}
+                onAddNewTask={() => handleOpenAddTask('hire')}
+                onEditTask={handleOpenEditTask}
+                onDeleteTask={handleDeleteTask}
+                schoolProfile={schoolProfile}
               />
             )}
 
@@ -448,6 +606,10 @@ export default function App() {
                 tasks={tasks}
                 onSelectTask={(task) => setSelectedTaskForDetail(task)}
                 onOpenWizard={() => setIsWizardOpen(true)}
+                onAddNewTask={() => handleOpenAddTask('construction')}
+                onEditTask={handleOpenEditTask}
+                onDeleteTask={handleDeleteTask}
+                schoolProfile={schoolProfile}
               />
             )}
 
@@ -456,6 +618,10 @@ export default function App() {
                 tasks={tasks}
                 fiscalYear={fiscalYear}
                 onSelectTask={(task) => setSelectedTaskForDetail(task)}
+                onAddNewTask={() => handleOpenAddTask('purchase')}
+                onEditTask={handleOpenEditTask}
+                onDeleteTask={handleDeleteTask}
+                schoolProfile={schoolProfile}
               />
             )}
 
@@ -464,7 +630,11 @@ export default function App() {
                 tasks={tasks}
                 onOpenWizard={() => setIsWizardOpen(true)}
                 onSelectTask={(task) => setSelectedTaskForDetail(task)}
+                onAddNewTask={() => handleOpenAddTask('w804')}
+                onEditTask={handleOpenEditTask}
+                onDeleteTask={handleDeleteTask}
                 fiscalYear={fiscalYear}
+                schoolProfile={schoolProfile}
               />
             )}
 
@@ -473,7 +643,11 @@ export default function App() {
                 tasks={tasks}
                 onOpenWizard={() => setIsWizardOpen(true)}
                 onSelectTask={(task) => setSelectedTaskForDetail(task)}
+                onAddNewTask={() => handleOpenAddTask('w119')}
+                onEditTask={handleOpenEditTask}
+                onDeleteTask={handleDeleteTask}
                 fiscalYear={fiscalYear}
+                schoolProfile={schoolProfile}
               />
             )}
 
@@ -481,19 +655,29 @@ export default function App() {
               <TextbooksModule
                 textbooks={textbooks}
                 onAddTextbook={handleAddTextbook}
+                onUpdateTextbook={handleUpdateTextbook}
+                onDeleteTextbook={handleDeleteTextbook}
                 onUpdateStatus={handleUpdateTextbookStatus}
+                schoolProfile={schoolProfile}
               />
             )}
 
             {activeModule === 'quarterly_announcement' && (
-              <QuarterlyAnnouncementModule tasks={tasks} fiscalYear={fiscalYear} />
+              <QuarterlyAnnouncementModule
+                tasks={tasks}
+                fiscalYear={fiscalYear}
+                schoolProfile={schoolProfile}
+              />
             )}
 
             {activeModule === 'inventory_ledger' && (
               <InventoryLedgerModule
                 materials={materials}
                 onAddMaterial={handleAddMaterial}
+                onUpdateMaterial={handleUpdateMaterial}
+                onDeleteMaterial={handleDeleteMaterial}
                 onStockAdjustment={handleStockAdjustment}
+                schoolProfile={schoolProfile}
               />
             )}
 
@@ -502,7 +686,10 @@ export default function App() {
                 requisitions={requisitions}
                 materials={materials}
                 onAddRequisition={handleAddRequisition}
+                onUpdateRequisition={handleUpdateRequisition}
+                onDeleteRequisition={handleDeleteRequisition}
                 onUpdateStatus={handleUpdateRequisitionStatus}
+                schoolProfile={schoolProfile}
               />
             )}
 
@@ -510,19 +697,29 @@ export default function App() {
               <BorrowReturnModule
                 borrows={borrows}
                 onAddBorrow={handleAddBorrow}
+                onUpdateBorrow={handleUpdateBorrow}
+                onDeleteBorrow={handleDeleteBorrow}
                 onReturnBorrow={handleReturnBorrow}
+                schoolProfile={schoolProfile}
               />
             )}
 
             {activeModule === 'material_report' && (
-              <MaterialReportModule materials={materials} fiscalYear={fiscalYear} />
+              <MaterialReportModule
+                materials={materials}
+                fiscalYear={fiscalYear}
+                schoolProfile={schoolProfile}
+              />
             )}
 
             {activeModule === 'asset_register' && (
               <AssetRegisterModule
                 assets={assets}
                 onAddAsset={handleAddAsset}
+                onUpdateAsset={handleUpdateAsset}
+                onDeleteAsset={handleDeleteAsset}
                 fiscalYear={fiscalYear}
+                schoolProfile={schoolProfile}
               />
             )}
 
@@ -530,7 +727,11 @@ export default function App() {
               <AnnualAuditModule
                 auditItems={auditItems}
                 onUpdateAuditStatus={handleUpdateAuditStatus}
+                onAddAuditItem={handleAddAuditItem}
+                onUpdateAuditItem={handleUpdateAuditItem}
+                onDeleteAuditItem={handleDeleteAuditItem}
                 fiscalYear={fiscalYear}
+                schoolProfile={schoolProfile}
               />
             )}
 
@@ -541,9 +742,14 @@ export default function App() {
                 departments={departments}
                 tasks={tasks}
                 onAddProject={handleAddProject}
+                onUpdateProject={handleUpdateProject}
+                onDeleteProject={handleDeleteProject}
                 onAddActivity={handleAddActivity}
+                onUpdateActivity={handleUpdateActivity}
+                onDeleteActivity={handleDeleteActivity}
                 onUpdateActivityStatus={handleUpdateActivityStatus}
                 fiscalYear={fiscalYear}
+                schoolProfile={schoolProfile}
               />
             )}
 
@@ -553,6 +759,8 @@ export default function App() {
                 departments={departments}
                 onAddStaff={handleAddStaff}
                 onUpdateStaff={handleUpdateStaff}
+                onDeleteStaff={handleDeleteStaff}
+                schoolProfile={schoolProfile}
               />
             )}
 
@@ -588,6 +796,18 @@ export default function App() {
         staffList={staffList}
       />
 
+      <TaskFormModal
+        isOpen={isTaskFormOpen}
+        onClose={() => setIsTaskFormOpen(false)}
+        task={editingTask}
+        onSave={handleSaveTask}
+        onDelete={handleDeleteTask}
+        fiscalYear={fiscalYear}
+        projects={projects}
+        staffList={staffList}
+        defaultType={defaultTaskType}
+      />
+
       <FollowUpModal
         isOpen={isAlertsOpen}
         onClose={() => setIsAlertsOpen(false)}
@@ -601,6 +821,7 @@ export default function App() {
         task={selectedTaskForDetail}
         onClose={() => setSelectedTaskForDetail(null)}
         onUpdateStatus={handleUpdateTaskStatus}
+        schoolProfile={schoolProfile}
       />
     </div>
   );

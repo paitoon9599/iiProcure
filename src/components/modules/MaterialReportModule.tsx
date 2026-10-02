@@ -1,15 +1,17 @@
 import React from 'react';
 import { LineChart, Printer, Download, TrendingUp, AlertTriangle, Layers, DollarSign } from 'lucide-react';
-import { MaterialItem } from '../../types';
+import { MaterialItem, SchoolProfile } from '../../types';
 
 interface MaterialReportModuleProps {
   materials: MaterialItem[];
   fiscalYear: number;
+  schoolProfile?: SchoolProfile;
 }
 
 export const MaterialReportModule: React.FC<MaterialReportModuleProps> = ({
   materials,
   fiscalYear,
+  schoolProfile,
 }) => {
   const totalStockValue = materials.reduce((s, m) => s + m.balance * m.unitPrice, 0);
   const lowStockItems = materials.filter((m) => m.balance <= m.minStock);
@@ -33,11 +35,18 @@ export const MaterialReportModule: React.FC<MaterialReportModuleProps> = ({
               <LineChart className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-slate-900 font-['Kanit',sans-serif]">
-                รายงานสรุปยอดพัสดุและวัสดุคงคลัง
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-2xl font-bold text-slate-900 font-['Kanit',sans-serif]">
+                  รายงานสรุปยอดพัสดุและวัสดุคงคลัง
+                </h2>
+                {schoolProfile && (
+                  <span className="hidden sm:inline-block text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                    {schoolProfile.schoolName}
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                รายงานสถานะพัสดุ มูลค่าคงเหลือ และการใช้วัสดุ ประจำปีงบประมาณ {fiscalYear}
+                รายงานสถานะพัสดุ มูลค่าคงเหลือ และการใช้วัสดุ ประจำปีงบประมาณ {fiscalYear} • {schoolProfile?.schoolName || 'โรงเรียนบ้านนิคมสายโท 12 เหนือ'} {schoolProfile?.districtOffice ? `(${schoolProfile.districtOffice})` : ''}
               </p>
             </div>
           </div>

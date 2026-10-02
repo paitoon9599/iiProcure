@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { Users, Plus, Printer, Search, Phone, Mail, CheckCircle2, Shield, UserCheck, Filter } from 'lucide-react';
-import { StaffPersonnel, Department } from '../../types';
+import { Users, Plus, Printer, Phone, Mail, CheckCircle2, Shield, UserCheck, Filter, Edit2, Trash2, X, Search } from 'lucide-react';
+import { StaffPersonnel, Department, SchoolProfile } from '../../types';
 
 interface PersonnelModuleProps {
   staffList: StaffPersonnel[];
   departments: Department[];
   onAddStaff: (staff: StaffPersonnel) => void;
   onUpdateStaff: (staff: StaffPersonnel) => void;
+  onDeleteStaff?: (staffId: string) => void;
+  schoolProfile?: SchoolProfile;
 }
 
 export const PersonnelModule: React.FC<PersonnelModuleProps> = ({
@@ -14,6 +16,8 @@ export const PersonnelModule: React.FC<PersonnelModuleProps> = ({
   departments,
   onAddStaff,
   onUpdateStaff,
+  onDeleteStaff,
+  schoolProfile,
 }) => {
   const [search, setSearch] = useState('');
   const [selectedDept, setSelectedDept] = useState('all');
@@ -88,6 +92,27 @@ export const PersonnelModule: React.FC<PersonnelModuleProps> = ({
     setEmail('');
   };
 
+  const handleSaveEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingStaff || !editingStaff.fullName.trim()) return;
+
+    const deptObj = departments.find((d) => d.id === editingStaff.departmentId);
+    const updated: StaffPersonnel = {
+      ...editingStaff,
+      departmentName: deptObj?.name || editingStaff.departmentName,
+    };
+
+    onUpdateStaff(updated);
+    setEditingStaff(null);
+  };
+
+  const handleDelete = (staff: StaffPersonnel) => {
+    if (!onDeleteStaff) return;
+    if (confirm(`คุณต้องการลบ "${staff.title}${staff.fullName}" ออกจากระบบหรือไม่?`)) {
+      onDeleteStaff(staff.id);
+    }
+  };
+
   return (
     <div className="space-y-5 pb-12">
       {/* Header */}
@@ -98,17 +123,24 @@ export const PersonnelModule: React.FC<PersonnelModuleProps> = ({
               <Users className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-slate-900 font-['Kanit',sans-serif]">
-                บุคลากรและตำแหน่งงานในสถานศึกษา
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-2xl font-bold text-slate-900 font-['Kanit',sans-serif]">
+                  บุคลากรและตำแหน่งงานในสถานศึกษา
+                </h2>
+                {schoolProfile && (
+                  <span className="hidden sm:inline-block text-[11px] font-semibold text-blue-800 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
+                    {schoolProfile.schoolName}
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                รายชื่อคณะครูและบุคลากรทางการศึกษา ตำแหน่ง วิทยฐานะ และบทบาทในงานจัดซื้อจัดจ้าง
+                รายชื่อคณะครูและบุคลากรทางการศึกษา ตำแหน่ง วิทยฐานะ และบทบาทในงานจัดซื้อจัดจ้าง • {schoolProfile?.schoolName || 'โรงเรียนบ้านนิคมสายโท 12 เหนือ'}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => window.print()}
             className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
@@ -250,16 +282,163 @@ export const PersonnelModule: React.FC<PersonnelModuleProps> = ({
               </div>
 
               <div className="mt-4 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs">
-                <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-medium">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  ปฏิบัติงานปกติ
-                </span>
                 <span className="font-mono text-[11px] text-slate-400">{staff.staffCode}</span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setEditingStaff(staff)}
+                    className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                    title="แก้ไขข้อมูลบุคลากร"
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                  </button>
+                  {onDeleteStaff && (
+                    <button
+                      onClick={() => handleDelete(staff)}
+                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                      title="ลบบุคลากร"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           );
         })}
       </div>
+
+      {/* Edit Staff Modal */}
+      {editingStaff && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+          <div className="bg-white w-full max-w-lg rounded-2xl shadow-xl p-6 border border-slate-100">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-slate-900 font-['Kanit',sans-serif]">
+                แก้ไขข้อมูลบุคลากร ({editingStaff.staffCode})
+              </h3>
+              <button
+                onClick={() => setEditingStaff(null)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleSaveEdit} className="space-y-3.5 text-xs">
+              <div className="grid grid-cols-4 gap-2">
+                <div>
+                  <label className="block font-semibold mb-1">คำนำหน้า</label>
+                  <select
+                    value={editingStaff.title}
+                    onChange={(e) => setEditingStaff({ ...editingStaff, title: e.target.value })}
+                    className="w-full p-2 border border-slate-300 rounded-lg"
+                  >
+                    <option value="นาย">นาย</option>
+                    <option value="นาง">นาง</option>
+                    <option value="นางสาว">นางสาว</option>
+                  </select>
+                </div>
+                <div className="col-span-3">
+                  <label className="block font-semibold mb-1">ชื่อ - นามสกุล *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingStaff.fullName}
+                    onChange={(e) => setEditingStaff({ ...editingStaff, fullName: e.target.value })}
+                    className="w-full p-2 border border-slate-300 rounded-lg font-medium"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1">ตำแหน่ง *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingStaff.position}
+                    onChange={(e) => setEditingStaff({ ...editingStaff, position: e.target.value })}
+                    className="w-full p-2 border border-slate-300 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1">วิทยฐานะ</label>
+                  <input
+                    type="text"
+                    value={editingStaff.academicStanding || ''}
+                    onChange={(e) => setEditingStaff({ ...editingStaff, academicStanding: e.target.value })}
+                    className="w-full p-2 border border-slate-300 rounded-lg"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1">สังกัดกลุ่มงาน / ฝ่าย</label>
+                  <select
+                    value={editingStaff.departmentId}
+                    onChange={(e) => setEditingStaff({ ...editingStaff, departmentId: e.target.value })}
+                    className="w-full p-2 border border-slate-300 rounded-lg"
+                  >
+                    {departments.map((d) => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1">บทบาทในงานพัสดุ</label>
+                  <select
+                    value={editingStaff.procurementRole}
+                    onChange={(e) => setEditingStaff({ ...editingStaff, procurementRole: e.target.value as StaffPersonnel['procurementRole'] })}
+                    className="w-full p-2 border border-slate-300 rounded-lg font-semibold"
+                  >
+                    <option value="teacher">ครูผู้สอน / ผู้ขอเบิก</option>
+                    <option value="inspector">กรรมการตรวจรับพัสดุ</option>
+                    <option value="procurement_officer">เจ้าหน้าที่พัสดุ</option>
+                    <option value="finance_officer">เจ้าหน้าที่การเงิน</option>
+                    <option value="approver">ผู้อนุมัติ (ผู้อำนวยการ)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1">เบอร์โทรศัพท์</label>
+                  <input
+                    type="text"
+                    value={editingStaff.phone}
+                    onChange={(e) => setEditingStaff({ ...editingStaff, phone: e.target.value })}
+                    className="w-full p-2 border border-slate-300 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1">อีเมล</label>
+                  <input
+                    type="email"
+                    value={editingStaff.email}
+                    onChange={(e) => setEditingStaff({ ...editingStaff, email: e.target.value })}
+                    className="w-full p-2 border border-slate-300 rounded-lg"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingStaff(null)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl cursor-pointer"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-xs cursor-pointer"
+                >
+                  บันทึกการแก้ไข
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Add Staff Modal */}
       {isAddOpen && (

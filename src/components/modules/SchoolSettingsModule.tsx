@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { School, Building, Save, CheckCircle2, Users, Plus, Edit2, Shield, Phone, Mail, MapPin } from 'lucide-react';
+import { School, Building, Save, CheckCircle2, Users, Plus, Edit2, Shield, Phone, Mail, MapPin, Trash2, X } from 'lucide-react';
 import { SchoolProfile, Department, StaffPersonnel } from '../../types';
 
 interface SchoolSettingsModuleProps {
@@ -21,6 +21,7 @@ export const SchoolSettingsModule: React.FC<SchoolSettingsModuleProps> = ({
   const [deptList, setDeptList] = useState<Department[]>(departments);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [isAddDeptOpen, setIsAddDeptOpen] = useState(false);
+  const [editingDept, setEditingDept] = useState<Department | null>(null);
 
   // New dept form
   const [deptCode, setDeptCode] = useState('');
@@ -56,6 +57,24 @@ export const SchoolSettingsModule: React.FC<SchoolSettingsModuleProps> = ({
     setIsAddDeptOpen(false);
     setDeptName('');
     setDeptDesc('');
+  };
+
+  const handleSaveEditDept = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingDept || !editingDept.name.trim()) return;
+
+    const updated = deptList.map((d) => (d.id === editingDept.id ? editingDept : d));
+    setDeptList(updated);
+    onUpdateDepartments(updated);
+    setEditingDept(null);
+  };
+
+  const handleDeleteDept = (dept: Department) => {
+    if (confirm(`คุณต้องการลบฝ่าย/กลุ่มงาน "${dept.name}" หรือไม่?`)) {
+      const updated = deptList.filter((d) => d.id !== dept.id);
+      setDeptList(updated);
+      onUpdateDepartments(updated);
+    }
   };
 
   return (
@@ -248,9 +267,25 @@ export const SchoolSettingsModule: React.FC<SchoolSettingsModuleProps> = ({
                     <span className="font-bold text-slate-900 text-sm font-['Kanit',sans-serif]">
                       {dept.name}
                     </span>
-                    <span className="font-mono text-[11px] text-slate-400 bg-white px-2 py-0.5 rounded-md border border-slate-200">
-                      {dept.code}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono text-[11px] text-slate-400 bg-white px-2 py-0.5 rounded-md border border-slate-200">
+                        {dept.code}
+                      </span>
+                      <button
+                        onClick={() => setEditingDept(dept)}
+                        className="p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors cursor-pointer"
+                        title="แก้ไขฝ่าย/กลุ่มงาน"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteDept(dept)}
+                        className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
+                        title="ลบฝ่าย/กลุ่มงาน"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                   <div className="text-xs text-slate-600 mt-1">
                     หัวหน้ากลุ่มงาน: <strong className="text-slate-800">{dept.headStaffName}</strong>
@@ -263,6 +298,86 @@ export const SchoolSettingsModule: React.FC<SchoolSettingsModuleProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Edit Department Modal */}
+      {editingDept && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-xl p-6 border border-slate-100">
+            <h3 className="text-lg font-bold text-slate-900 mb-4 font-['Kanit',sans-serif]">
+              แก้ไขฝ่ายบริหาร / กลุ่มงาน
+            </h3>
+            <form onSubmit={handleSaveEditDept} className="space-y-3.5 text-xs">
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="block font-semibold mb-1">รหัสกลุ่มงาน</label>
+                  <input
+                    type="text"
+                    value={editingDept.code}
+                    onChange={(e) => setEditingDept({ ...editingDept, code: e.target.value })}
+                    className="w-full p-2 border border-slate-300 rounded-lg font-mono"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="block font-semibold mb-1">ชื่อกลุ่มงาน / ฝ่าย *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingDept.name}
+                    onChange={(e) => setEditingDept({ ...editingDept, name: e.target.value })}
+                    className="w-full p-2 border border-slate-300 rounded-lg"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1">หัวหน้ากลุ่มงาน</label>
+                <input
+                  type="text"
+                  value={editingDept.headStaffName}
+                  onChange={(e) => setEditingDept({ ...editingDept, headStaffName: e.target.value })}
+                  className="w-full p-2 border border-slate-300 rounded-lg"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1">ตำแหน่งหัวหน้ากลุ่มงาน</label>
+                <input
+                  type="text"
+                  value={editingDept.headStaffPosition}
+                  onChange={(e) => setEditingDept({ ...editingDept, headStaffPosition: e.target.value })}
+                  className="w-full p-2 border border-slate-300 rounded-lg"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1">หน้าที่ความรับผิดชอบย่อ</label>
+                <textarea
+                  rows={2}
+                  value={editingDept.description}
+                  onChange={(e) => setEditingDept({ ...editingDept, description: e.target.value })}
+                  className="w-full p-2 border border-slate-300 rounded-lg"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingDept(null)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl cursor-pointer"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-xs cursor-pointer"
+                >
+                  บันทึกการแก้ไข
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Add Department Modal */}
       {isAddDeptOpen && (

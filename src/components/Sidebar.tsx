@@ -29,6 +29,7 @@ interface SidebarProps {
   onClose: () => void;
   overdueCount?: number;
   pendingRequisitionCount?: number;
+  schoolName?: string;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -38,6 +39,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onClose,
   overdueCount = 2,
   pendingRequisitionCount = 1,
+  schoolName,
 }) => {
   const sections = [
     {
@@ -113,7 +115,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
             <div>
               <div className="font-bold text-slate-800 text-[15px] leading-tight">พัสดุ</div>
-              <div className="text-xs text-slate-400">ระบบงานพัสดุ</div>
+              <div className="text-xs text-slate-500 font-medium truncate max-w-[155px]" title={schoolName || 'ระบบงานพัสดุ'}>
+                {schoolName || 'ระบบงานพัสดุ'}
+              </div>
             </div>
           </div>
           <button

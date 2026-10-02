@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
-import { ShoppingBag, Plus, Printer, CheckCircle2, Info, Receipt, Search, FileText } from 'lucide-react';
-import { ProcurementTask } from '../../types';
+import { ShoppingBag, Plus, Printer, CheckCircle2, Info, Receipt, Search, FileText, Edit2, Trash2 } from 'lucide-react';
+import { ProcurementTask, SchoolProfile } from '../../types';
 
 interface W804ModuleProps {
   tasks: ProcurementTask[];
   onOpenWizard: () => void;
   onSelectTask: (task: ProcurementTask) => void;
   fiscalYear: number;
+  schoolProfile?: SchoolProfile;
+  onAddNewTask?: () => void;
+  onEditTask?: (task: ProcurementTask) => void;
+  onDeleteTask?: (taskId: string) => void;
 }
 
 export const W804Module: React.FC<W804ModuleProps> = ({
@@ -14,6 +18,10 @@ export const W804Module: React.FC<W804ModuleProps> = ({
   onOpenWizard,
   onSelectTask,
   fiscalYear,
+  schoolProfile,
+  onAddNewTask,
+  onEditTask,
+  onDeleteTask,
 }) => {
   const [search, setSearch] = useState('');
 
@@ -40,17 +48,24 @@ export const W804Module: React.FC<W804ModuleProps> = ({
               <ShoppingBag className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-slate-900 font-['Kanit',sans-serif]">
-                ว.804 ซื้อไม่เกิน 50,000 บาท
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-2xl font-bold text-slate-900 font-['Kanit',sans-serif]">
+                  ว.804 ซื้อไม่เกิน 50,000 บาท
+                </h2>
+                {schoolProfile && (
+                  <span className="hidden sm:inline-block text-[11px] font-semibold text-purple-800 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200">
+                    {schoolProfile.schoolName}
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                แนวทางปฏิบัติการจัดซื้อจัดจ้างตามหนังสือเวียน กค (กวจ) ว 804 แบบเร่งด่วน ใช้ใบเสร็จรับเงินเป็นหลักฐาน
+                แนวทางปฏิบัติการจัดซื้อจัดจ้างตามหนังสือเวียน กค (กวจ) ว 804 • {schoolProfile?.schoolName || 'โรงเรียนบ้านนิคมสายโท 12 เหนือ'}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => window.print()}
             className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
@@ -58,12 +73,21 @@ export const W804Module: React.FC<W804ModuleProps> = ({
             <Printer className="w-3.5 h-3.5" />
             <span>พิมพ์สรุปเบิกจ่าย</span>
           </button>
+          {onAddNewTask && (
+            <button
+              onClick={onAddNewTask}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>+ บันทึก ว.804</span>
+            </button>
+          )}
           <button
             onClick={onOpenWizard}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>+ บันทึกรายการ ว.804</span>
+            <span>สร้างแบบทีละข้อ</span>
           </button>
         </div>
       </div>
@@ -137,6 +161,11 @@ export const W804Module: React.FC<W804ModuleProps> = ({
               <h3 className="font-semibold text-slate-900 text-sm group-hover:text-purple-800 transition-colors line-clamp-2">
                 {item.title}
               </h3>
+              {item.projectName && (
+                <div className="text-[11px] text-indigo-800 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100 font-medium inline-block mt-1">
+                  {item.projectCode || 'โครงการ'}: {item.projectName} {item.activityName ? `> ${item.activityName}` : ''}
+                </div>
+              )}
               <p className="text-xs text-slate-500 mt-1">
                 ร้านค้า: <strong className="text-slate-700">{item.vendorName}</strong>
               </p>
@@ -146,8 +175,38 @@ export const W804Module: React.FC<W804ModuleProps> = ({
             </div>
 
             <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-              <div className="text-xs text-slate-500">
-                งบประมาณ: <span className="text-slate-700">{item.budgetSource}</span>
+              <div className="flex items-center gap-1.5">
+                <div className="text-xs text-slate-500">
+                  งบ: <span className="text-slate-700 font-medium">{item.budgetSource}</span>
+                </div>
+                {onEditTask && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEditTask(item);
+                    }}
+                    className="p-1 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-md transition-colors"
+                    title="แก้ไขรายการ"
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                {onDeleteTask && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm(`คุณต้องการลบรายการ "${item.title}" หรือไม่?`)) {
+                        onDeleteTask(item.id);
+                      }
+                    }}
+                    className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                    title="ลบรายการ"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
               <div className="text-right">
                 <div className="text-base font-extrabold text-slate-900 font-['Kanit',sans-serif]">

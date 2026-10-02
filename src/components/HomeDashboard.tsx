@@ -17,8 +17,11 @@ import {
   CheckCircle2,
   Clock,
   Search,
+  Edit2,
+  Trash2,
+  Sparkles,
 } from 'lucide-react';
-import { ModuleId, ProcurementTask, TaskType } from '../types';
+import { ModuleId, ProcurementTask, TaskType, SchoolProfile } from '../types';
 
 interface HomeDashboardProps {
   tasks: ProcurementTask[];
@@ -27,6 +30,10 @@ interface HomeDashboardProps {
   onOpenAlerts: () => void;
   onSelectTask: (task: ProcurementTask) => void;
   fiscalYear: number;
+  schoolProfile?: SchoolProfile;
+  onEditTask?: (task: ProcurementTask) => void;
+  onDeleteTask?: (taskId: string) => void;
+  onAddNewTask?: () => void;
 }
 
 export const HomeDashboard: React.FC<HomeDashboardProps> = ({
@@ -36,6 +43,10 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
   onOpenAlerts,
   onSelectTask,
   fiscalYear,
+  schoolProfile,
+  onEditTask,
+  onDeleteTask,
+  onAddNewTask,
 }) => {
   const [activeFilter, setActiveFilter] = useState<'all' | TaskType>('all');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
@@ -131,15 +142,27 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight font-['Kanit',sans-serif] mt-0.5">
             สวัสดีครับ ครูทัศน์พล
           </h1>
-          <p className="text-sm text-slate-500">โรงเรียนบ้านนิคมสายโท 12 เหนือ</p>
+          <p className="text-sm text-slate-500 font-medium">
+            {schoolProfile?.schoolName || 'โรงเรียนบ้านนิคมสายโท 12 เหนือ'}
+            {schoolProfile?.districtOffice ? ` • ${schoolProfile.districtOffice}` : ''}
+          </p>
         </div>
 
-        <div>
+        <div className="flex items-center gap-2 flex-wrap">
+          {onAddNewTask && (
+            <button
+              onClick={onAddNewTask}
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full font-medium text-[13.5px] shadow-xs hover:shadow transition-all active:scale-98 cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>+ เพิ่มรายการจัดซื้อ</span>
+            </button>
+          )}
           <button
             onClick={onOpenWizard}
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#1d72f2] hover:bg-[#155ec4] text-white rounded-full font-medium text-[14px] shadow-sm hover:shadow transition-all active:scale-98 cursor-pointer"
           >
-            <Plus className="w-4 h-4" />
+            <Sparkles className="w-4 h-4" />
             <span>งานใหม่แบบถามทีละข้อ</span>
           </button>
         </div>
@@ -519,7 +542,38 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                       )}
                     </div>
 
-                    <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-600 transition-colors" />
+                    {/* Actions: Edit & Delete buttons */}
+                    <div className="flex items-center gap-1">
+                      {onEditTask && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEditTask(task);
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                          title="แก้ไขรายการนี้"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      {onDeleteTask && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm(`คุณต้องการลบรายการ "${task.title}" หรือไม่?`)) {
+                              onDeleteTask(task.id);
+                            }
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                          title="ลบรายการนี้"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-600 transition-colors" />
+                    </div>
                   </div>
                 </div>
               );

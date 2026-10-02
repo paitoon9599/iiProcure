@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Plus, Search, Filter, Printer, Download, Eye, CheckCircle2, Clock } from 'lucide-react';
-import { ProcurementTask, TaskType } from '../../types';
+import { Plus, Search, Filter, Printer, Download, Eye, CheckCircle2, Clock, Edit2, Trash2 } from 'lucide-react';
+import { ProcurementTask, TaskType, SchoolProfile } from '../../types';
 
 interface ProcurementModuleProps {
   type: TaskType;
@@ -9,6 +9,10 @@ interface ProcurementModuleProps {
   tasks: ProcurementTask[];
   onSelectTask: (task: ProcurementTask) => void;
   onOpenWizard: () => void;
+  schoolProfile?: SchoolProfile;
+  onEditTask?: (task: ProcurementTask) => void;
+  onDeleteTask?: (taskId: string) => void;
+  onAddNewTask?: () => void;
 }
 
 export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
@@ -18,6 +22,10 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
   tasks,
   onSelectTask,
   onOpenWizard,
+  schoolProfile,
+  onEditTask,
+  onDeleteTask,
+  onAddNewTask,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'in_progress'>('all');
@@ -43,11 +51,20 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 font-['Kanit',sans-serif]">{title}</h2>
-          <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>
+          <div className="flex items-center gap-2">
+            <h2 className="text-2xl font-bold text-slate-900 font-['Kanit',sans-serif]">{title}</h2>
+            {schoolProfile && (
+              <span className="hidden sm:inline-block text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                {schoolProfile.schoolName}
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-slate-500 mt-0.5">
+            {subtitle} {schoolProfile ? `• ${schoolProfile.schoolName}` : ''}
+          </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => window.print()}
             className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-medium transition-colors cursor-pointer"
@@ -55,12 +72,21 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
             <Printer className="w-3.5 h-3.5" />
             <span>พิมพ์รายงาน</span>
           </button>
+          {onAddNewTask && (
+            <button
+              onClick={onAddNewTask}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>+ บันทึกรายการใหม่</span>
+            </button>
+          )}
           <button
             onClick={onOpenWizard}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>+ สร้างรายการใหม่</span>
+            <span>สร้างแบบทีละข้อ</span>
           </button>
         </div>
       </div>
@@ -177,14 +203,40 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
                       )}
                     </td>
                     <td className="p-3.5 text-center whitespace-nowrap">
-                      <button
-                        onClick={() => onSelectTask(item)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
-                        title="ดูรายละเอียดและพิมพ์เอกสาร"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        <span>เปิดดู</span>
-                      </button>
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          onClick={() => onSelectTask(item)}
+                          className="inline-flex items-center gap-1 px-2 py-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                          title="ดูรายละเอียดและพิมพ์เอกสาร"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>เปิดดู</span>
+                        </button>
+                        {onEditTask && (
+                          <button
+                            onClick={() => onEditTask(item)}
+                            className="inline-flex items-center gap-1 px-2 py-1 text-slate-600 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
+                            title="แก้ไขรายการ"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                            <span>แก้ไข</span>
+                          </button>
+                        )}
+                        {onDeleteTask && (
+                          <button
+                            onClick={() => {
+                              if (confirm(`คุณต้องการลบรายการ "${item.title}" หรือไม่?`)) {
+                                onDeleteTask(item.id);
+                              }
+                            }}
+                            className="inline-flex items-center gap-1 px-2 py-1 text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                            title="ลบรายการ"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>ลบ</span>
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))

@@ -1,23 +1,44 @@
 import React, { useState } from 'react';
-import { Megaphone, Printer, Calendar, FileText, CheckCircle2, AlertTriangle, Download } from 'lucide-react';
-import { ProcurementTask } from '../../types';
+import { Megaphone, Printer, Calendar, FileText, CheckCircle2, AlertTriangle, Download, Plus, Edit2, Trash2, X } from 'lucide-react';
+import { ProcurementTask, SchoolProfile } from '../../types';
 
 interface QuarterlyAnnouncementProps {
   tasks: ProcurementTask[];
   fiscalYear: number;
+  schoolProfile?: SchoolProfile;
+}
+
+interface CustomAnnouncementItem {
+  id: string;
+  quarter: number;
+  title: string;
+  amount: number;
+  method: string;
+  vendor: string;
+  reason: string;
+  poNumber: string;
 }
 
 export const QuarterlyAnnouncementModule: React.FC<QuarterlyAnnouncementProps> = ({
   tasks,
   fiscalYear,
+  schoolProfile,
 }) => {
   const [selectedQuarter, setSelectedQuarter] = useState<number>(4);
+  const [publishSuccess, setPublishSuccess] = useState(false);
+  const [customItems, setCustomItems] = useState<CustomAnnouncementItem[]>([]);
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<CustomAnnouncementItem | null>(null);
+
+  // Form states
+  const [formTitle, setFormTitle] = useState('');
+  const [formAmount, setFormAmount] = useState<number>(10000);
+  const [formMethod, setFormMethod] = useState('เฉพาะเจาะจง');
+  const [formVendor, setFormVendor] = useState('');
+  const [formReason, setFormReason] = useState('ราคาเหมาะสมตามท้องตลาด');
+  const [formPo, setFormPo] = useState('');
 
   // Group tasks into quarters:
-  // Q1: Oct - Dec (months 10, 11, 12 of previous solar year)
-  // Q2: Jan - Mar
-  // Q3: Apr - Jun
-  // Q4: Jul - Sep
   const quarters = [
     { q: 1, name: 'ไตรมาสที่ 1', period: '1 ต.ค. - 31 ธ.ค.', status: 'ประกาศแล้ว' },
     { q: 2, name: 'ไตรมาสที่ 2', period: '1 ม.ค. - 31 มี.ค.', status: 'ประกาศแล้ว' },
@@ -25,9 +46,52 @@ export const QuarterlyAnnouncementModule: React.FC<QuarterlyAnnouncementProps> =
     { q: 4, name: 'ไตรมาสที่ 4', period: '1 ก.ค. - 30 ก.ย.', status: 'ยังไม่ได้ประกาศ (กำหนด 30 ต.ค. 69)' },
   ];
 
-  // In our mock database, we have 10 items in Q4 as indicated by the screenshot
   const qTasks = selectedQuarter === 4 ? tasks.slice(0, 10) : tasks.slice(0, 5);
-  const totalQuarterAmount = qTasks.reduce((s, t) => s + t.amount, 0);
+  const quarterCustom = customItems.filter((i) => i.quarter === selectedQuarter);
+  const totalQuarterAmount =
+    qTasks.reduce((s, t) => s + t.amount, 0) +
+    quarterCustom.reduce((s, i) => s + i.amount, 0);
+
+  const handleCreateCustom = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formTitle.trim()) return;
+
+    const newItem: CustomAnnouncementItem = {
+      id: `ann-${Date.now()}`,
+      quarter: selectedQuarter,
+      title: formTitle.trim(),
+      amount: Number(formAmount) || 0,
+      method: formMethod,
+      vendor: formVendor.trim() || 'ร้านค้าทั่วไป',
+      reason: formReason.trim(),
+      poNumber: formPo.trim() || `PO-${Math.floor(Math.random() * 900 + 100)}/${fiscalYear}`,
+    };
+
+    setCustomItems([...customItems, newItem]);
+    setIsAddOpen(false);
+    setFormTitle('');
+    setFormVendor('');
+    setFormPo('');
+  };
+
+  const handleSaveEditCustom = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingItem || !editingItem.title.trim()) return;
+
+    setCustomItems(customItems.map((i) => (i.id === editingItem.id ? editingItem : i)));
+    setEditingItem(null);
+  };
+
+  const handleDeleteCustom = (id: string) => {
+    if (confirm('คุณต้องการลบรายการประกาศนี้หรือไม่?')) {
+      setCustomItems(customItems.filter((i) => i.id !== id));
+    }
+  };
+
+  const handlePublish = () => {
+    setPublishSuccess(true);
+    setTimeout(() => setPublishSuccess(false), 4000);
+  };
 
   return (
     <div className="space-y-5 pb-12">
@@ -39,17 +103,24 @@ export const QuarterlyAnnouncementModule: React.FC<QuarterlyAnnouncementProps> =
               <Megaphone className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-slate-900 font-['Kanit',sans-serif]">
-                ประกาศผลการจัดซื้อจัดจ้างรายไตรมาส (แบบ สขร. 1)
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-2xl font-bold text-slate-900 font-['Kanit',sans-serif]">
+                  ประกาศผลการจัดซื้อจัดจ้างรายไตรมาส (แบบ สขร. 1)
+                </h2>
+                {schoolProfile && (
+                  <span className="hidden sm:inline-block text-[11px] font-semibold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                    {schoolProfile.schoolName}
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                สรุปผลการจัดซื้อจัดจ้างเพื่อเผยแพร่ตาม พ.ร.บ. ข้อมูลข่าวสารของราชการ พ.ศ. 2540
+                สรุปผลการจัดซื้อจัดจ้างเพื่อเผยแพร่ตาม พ.ร.บ. ข้อมูลข่าวสารของราชการ พ.ศ. 2540 • {schoolProfile?.schoolName || 'โรงเรียนบ้านนิคมสายโท 12 เหนือ'}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => window.print()}
             className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
@@ -58,7 +129,14 @@ export const QuarterlyAnnouncementModule: React.FC<QuarterlyAnnouncementProps> =
             <span>พิมพ์แบบ สขร. 1</span>
           </button>
           <button
-            onClick={() => alert('บันทึกการเผยแพร่ประกาศ สขร. 1 เรียบร้อยแล้ว')}
+            onClick={() => setIsAddOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>+ เพิ่มรายการ สขร.1</span>
+          </button>
+          <button
+            onClick={handlePublish}
             className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
           >
             <CheckCircle2 className="w-4 h-4" />
@@ -66,6 +144,13 @@ export const QuarterlyAnnouncementModule: React.FC<QuarterlyAnnouncementProps> =
           </button>
         </div>
       </div>
+
+      {publishSuccess && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 flex items-center gap-2 text-xs text-emerald-900 font-semibold animate-in fade-in">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span>บันทึกการเผยแพร่ประกาศ สขร. 1 ประจำไตรมาสที่ {selectedQuarter} สำเร็จแล้ว</span>
+        </div>
+      )}
 
       {/* Quarter Selector Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
@@ -124,7 +209,9 @@ export const QuarterlyAnnouncementModule: React.FC<QuarterlyAnnouncementProps> =
             <h3 className="font-bold text-sm text-slate-900 font-['Kanit',sans-serif]">
               แบบ สขร. 1 สรุปผลการจัดซื้อจัดจ้าง ไตรมาสที่ {selectedQuarter} ปีงบประมาณ {fiscalYear}
             </h3>
-            <p className="text-[11px] text-slate-500">โรงเรียนบ้านนิคมสายโท 12 เหนือ สำนักงานเขตพื้นที่การศึกษาประถมศึกษาบุรีรัมย์ เขต 2</p>
+            <p className="text-[11px] text-slate-500">
+              {schoolProfile?.schoolName || 'โรงเรียนบ้านนิคมสายโท 12 เหนือ'} {schoolProfile?.districtOffice || 'สำนักงานเขตพื้นที่การศึกษาประถมศึกษาบุรีรัมย์ เขต 2'}
+            </p>
           </div>
           <span className="text-xs font-semibold text-slate-700">
             ยอดรวม: {totalQuarterAmount.toLocaleString()} บาท
@@ -143,7 +230,8 @@ export const QuarterlyAnnouncementModule: React.FC<QuarterlyAnnouncementProps> =
                 <th className="p-2.5 border-r border-slate-200">ผู้ได้รับการคัดเลือก</th>
                 <th className="p-2.5 border-r border-slate-200 text-right">ราคาที่ตกลงซื้อจ้าง</th>
                 <th className="p-2.5 border-r border-slate-200 text-center">เหตุผลที่คัดเลือก</th>
-                <th className="p-2.5 text-center">เลขที่และวันที่สัญญา</th>
+                <th className="p-2.5 border-r border-slate-200 text-center">เลขที่และวันที่สัญญา</th>
+                <th className="p-2.5 text-center w-16">จัดการ</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700 font-['Sarabun',sans-serif]">
@@ -163,8 +251,46 @@ export const QuarterlyAnnouncementModule: React.FC<QuarterlyAnnouncementProps> =
                   <td className="p-2.5 border-r border-slate-100 text-center text-slate-600 text-[11px]">
                     ราคาเหมาะสมตามท้องตลาด
                   </td>
-                  <td className="p-2.5 text-center font-mono text-[11px] whitespace-nowrap">
+                  <td className="p-2.5 border-r border-slate-100 text-center font-mono text-[11px] whitespace-nowrap">
                     {t.poNumber} ({t.dateStr})
+                  </td>
+                  <td className="p-2.5 text-center text-slate-400 text-[11px]">
+                    ระบบอัตโนมัติ
+                  </td>
+                </tr>
+              ))}
+              {quarterCustom.map((item, cIdx) => (
+                <tr key={item.id} className="hover:bg-amber-50/50 bg-amber-50/20">
+                  <td className="p-2.5 border-r border-slate-100 text-center font-mono">{qTasks.length + cIdx + 1}</td>
+                  <td className="p-2.5 border-r border-slate-100 font-semibold text-slate-900 max-w-xs">
+                    {item.title} <span className="text-[10px] text-amber-700 bg-amber-100 px-1 py-0.5 rounded-sm font-normal">เพิ่มเอง</span>
+                  </td>
+                  <td className="p-2.5 border-r border-slate-100 text-right font-medium">{item.amount.toLocaleString()}</td>
+                  <td className="p-2.5 border-r border-slate-100 text-right font-medium">{item.amount.toLocaleString()}</td>
+                  <td className="p-2.5 border-r border-slate-100 whitespace-nowrap">{item.method}</td>
+                  <td className="p-2.5 border-r border-slate-100 font-medium text-slate-900">{item.vendor}</td>
+                  <td className="p-2.5 border-r border-slate-100 text-right font-bold text-slate-900 font-['Kanit',sans-serif]">
+                    {item.amount.toLocaleString()}
+                  </td>
+                  <td className="p-2.5 border-r border-slate-100 text-center text-slate-600 text-[11px]">{item.reason}</td>
+                  <td className="p-2.5 border-r border-slate-100 text-center font-mono text-[11px] whitespace-nowrap">{item.poNumber}</td>
+                  <td className="p-2.5 text-center whitespace-nowrap">
+                    <div className="flex items-center justify-center gap-1">
+                      <button
+                        onClick={() => setEditingItem(item)}
+                        className="p-1 text-slate-400 hover:text-blue-600 rounded cursor-pointer"
+                        title="แก้ไข"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteCustom(item.id)}
+                        className="p-1 text-slate-400 hover:text-red-600 rounded cursor-pointer"
+                        title="ลบ"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -172,6 +298,205 @@ export const QuarterlyAnnouncementModule: React.FC<QuarterlyAnnouncementProps> =
           </table>
         </div>
       </div>
+
+      {/* Add Custom Announcement Modal */}
+      {isAddOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+          <div className="bg-white w-full max-w-lg rounded-2xl shadow-xl p-6 border border-slate-100">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-slate-900 font-['Kanit',sans-serif]">
+                เพิ่มรายการประกาศ สขร. 1 (ไตรมาสที่ {selectedQuarter})
+              </h3>
+              <button onClick={() => setIsAddOpen(false)} className="p-1 text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleCreateCustom} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block font-semibold mb-1">งานจัดซื้อจัดจ้าง *</label>
+                <input
+                  type="text"
+                  required
+                  value={formTitle}
+                  onChange={(e) => setFormTitle(e.target.value)}
+                  placeholder="เช่น ซื้อวัสดุสื่อการเรียนการสอนปฐมวัย"
+                  className="w-full p-2 border border-slate-300 rounded-lg"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1">วงเงินงบประมาณ (บาท) *</label>
+                  <input
+                    type="number"
+                    required
+                    value={formAmount}
+                    onChange={(e) => setFormAmount(Number(e.target.value))}
+                    className="w-full p-2 border border-slate-300 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1">วิธีซื้อหรือจ้าง</label>
+                  <input
+                    type="text"
+                    value={formMethod}
+                    onChange={(e) => setFormMethod(e.target.value)}
+                    className="w-full p-2 border border-slate-300 rounded-lg"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1">ผู้ได้รับการคัดเลือก *</label>
+                  <input
+                    type="text"
+                    required
+                    value={formVendor}
+                    onChange={(e) => setFormVendor(e.target.value)}
+                    placeholder="เช่น หจก. บุรีรัมย์ศึกษาภัณฑ์"
+                    className="w-full p-2 border border-slate-300 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1">เลขที่และวันที่สัญญา/ใบสั่งซื้อ</label>
+                  <input
+                    type="text"
+                    value={formPo}
+                    onChange={(e) => setFormPo(e.target.value)}
+                    placeholder="เช่น PO-012/2569 (1 ต.ค. 69)"
+                    className="w-full p-2 border border-slate-300 rounded-lg font-mono"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1">เหตุผลที่คัดเลือก</label>
+                <input
+                  type="text"
+                  value={formReason}
+                  onChange={(e) => setFormReason(e.target.value)}
+                  className="w-full p-2 border border-slate-300 rounded-lg"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddOpen(false)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl cursor-pointer"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl shadow-xs cursor-pointer"
+                >
+                  บันทึกรายการ
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Custom Announcement Modal */}
+      {editingItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+          <div className="bg-white w-full max-w-lg rounded-2xl shadow-xl p-6 border border-slate-100">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-slate-900 font-['Kanit',sans-serif]">
+                แก้ไขรายการประกาศ สขร. 1
+              </h3>
+              <button onClick={() => setEditingItem(null)} className="p-1 text-slate-400 hover:text-slate-600 cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleSaveEditCustom} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block font-semibold mb-1">งานจัดซื้อจัดจ้าง *</label>
+                <input
+                  type="text"
+                  required
+                  value={editingItem.title}
+                  onChange={(e) => setEditingItem({ ...editingItem, title: e.target.value })}
+                  className="w-full p-2 border border-slate-300 rounded-lg"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1">วงเงินงบประมาณ (บาท) *</label>
+                  <input
+                    type="number"
+                    required
+                    value={editingItem.amount}
+                    onChange={(e) => setEditingItem({ ...editingItem, amount: Number(e.target.value) })}
+                    className="w-full p-2 border border-slate-300 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1">วิธีซื้อหรือจ้าง</label>
+                  <input
+                    type="text"
+                    value={editingItem.method}
+                    onChange={(e) => setEditingItem({ ...editingItem, method: e.target.value })}
+                    className="w-full p-2 border border-slate-300 rounded-lg"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1">ผู้ได้รับการคัดเลือก *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingItem.vendor}
+                    onChange={(e) => setEditingItem({ ...editingItem, vendor: e.target.value })}
+                    className="w-full p-2 border border-slate-300 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1">เลขที่และวันที่สัญญา</label>
+                  <input
+                    type="text"
+                    value={editingItem.poNumber}
+                    onChange={(e) => setEditingItem({ ...editingItem, poNumber: e.target.value })}
+                    className="w-full p-2 border border-slate-300 rounded-lg font-mono"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1">เหตุผลที่คัดเลือก</label>
+                <input
+                  type="text"
+                  value={editingItem.reason}
+                  onChange={(e) => setEditingItem({ ...editingItem, reason: e.target.value })}
+                  className="w-full p-2 border border-slate-300 rounded-lg"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingItem(null)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl cursor-pointer"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl shadow-xs cursor-pointer"
+                >
+                  บันทึกการแก้ไข
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

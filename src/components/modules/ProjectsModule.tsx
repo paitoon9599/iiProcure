@@ -14,8 +14,11 @@ import {
   Layers,
   FileText,
   Building,
+  Edit2,
+  Trash2,
+  X,
 } from 'lucide-react';
-import { ApprovedProject, ProjectActivity, StaffPersonnel, Department, ProcurementTask } from '../../types';
+import { ApprovedProject, ProjectActivity, StaffPersonnel, Department, ProcurementTask, SchoolProfile } from '../../types';
 
 interface ProjectsModuleProps {
   projects: ApprovedProject[];
@@ -23,9 +26,14 @@ interface ProjectsModuleProps {
   departments: Department[];
   tasks?: ProcurementTask[];
   onAddProject: (project: ApprovedProject) => void;
+  onUpdateProject?: (project: ApprovedProject) => void;
+  onDeleteProject?: (projectId: string) => void;
   onAddActivity: (projectId: string, activity: ProjectActivity) => void;
+  onUpdateActivity?: (projectId: string, activity: ProjectActivity) => void;
+  onDeleteActivity?: (projectId: string, activityId: string) => void;
   onUpdateActivityStatus: (projectId: string, activityId: string, status: ProjectActivity['status']) => void;
   fiscalYear: number;
+  schoolProfile?: SchoolProfile;
 }
 
 export const ProjectsModule: React.FC<ProjectsModuleProps> = ({
@@ -34,9 +42,14 @@ export const ProjectsModule: React.FC<ProjectsModuleProps> = ({
   departments,
   tasks = [],
   onAddProject,
+  onUpdateProject,
+  onDeleteProject,
   onAddActivity,
+  onUpdateActivity,
+  onDeleteActivity,
   onUpdateActivityStatus,
   fiscalYear,
+  schoolProfile,
 }) => {
   const [search, setSearch] = useState('');
   const [selectedDept, setSelectedDept] = useState('all');
@@ -62,6 +75,37 @@ export const ProjectsModule: React.FC<ProjectsModuleProps> = ({
   const [actBudget, setActBudget] = useState<number>(15000);
   const [actPeriod, setActPeriod] = useState('ต.ค. 68 - มี.ค. 69');
   const [actDesc, setActDesc] = useState('');
+
+  const [editingProject, setEditingProject] = useState<ApprovedProject | null>(null);
+  const [editingActivity, setEditingActivity] = useState<{ projectId: string; activity: ProjectActivity } | null>(null);
+
+  const handleSaveEditProject = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProject || !editingProject.name.trim() || !onUpdateProject) return;
+    onUpdateProject(editingProject);
+    setEditingProject(null);
+  };
+
+  const handleDeleteProject = (proj: ApprovedProject) => {
+    if (!onDeleteProject) return;
+    if (confirm(`คุณต้องการลบโครงการ "${proj.name}" (${proj.code}) พร้อมกิจกรรมทั้งหมดหรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้`)) {
+      onDeleteProject(proj.id);
+    }
+  };
+
+  const handleSaveEditActivity = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingActivity || !editingActivity.activity.name.trim() || !onUpdateActivity) return;
+    onUpdateActivity(editingActivity.projectId, editingActivity.activity);
+    setEditingActivity(null);
+  };
+
+  const handleDeleteActivity = (projectId: string, act: ProjectActivity) => {
+    if (!onDeleteActivity) return;
+    if (confirm(`คุณต้องการลบกิจกรรม "${act.name}" (${act.code}) หรือไม่?`)) {
+      onDeleteActivity(projectId, act.id);
+    }
+  };
 
   const filtered = projects.filter((p) => {
     if (selectedDept !== 'all' && p.departmentId !== selectedDept) return false;
@@ -158,11 +202,18 @@ export const ProjectsModule: React.FC<ProjectsModuleProps> = ({
               <FolderKanban className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-slate-900 font-['Kanit',sans-serif]">
-                โครงการที่ได้รับอนุมัติและกิจกรรมประจำปี {fiscalYear}
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-2xl font-bold text-slate-900 font-['Kanit',sans-serif]">
+                  โครงการที่ได้รับอนุมัติและกิจกรรมประจำปี {fiscalYear}
+                </h2>
+                {schoolProfile && (
+                  <span className="hidden sm:inline-block text-[11px] font-semibold text-indigo-800 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-200">
+                    {schoolProfile.schoolName}
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                แผนปฏิบัติการประจำปีสถานศึกษา ติดตามเจ้าของโครงการ วงเงินจัดสรร และกิจกรรมย่อยแต่ละโครงการ
+                แผนปฏิบัติการประจำปีสถานศึกษา ติดตามเจ้าของโครงการ วงเงินจัดสรร และกิจกรรมย่อย • {schoolProfile?.schoolName || 'โรงเรียนบ้านนิคมสายโท 12 เหนือ'}
               </p>
             </div>
           </div>
@@ -294,7 +345,7 @@ export const ProjectsModule: React.FC<ProjectsModuleProps> = ({
                 </div>
 
                 {/* Right: Budget metrics and toggle */}
-                <div className="flex items-center gap-5 shrink-0 self-end lg:self-center">
+                <div className="flex items-center gap-4 shrink-0 self-end lg:self-center">
                   <div className="text-right">
                     <div className="text-xs text-slate-400">งบประมาณจัดสรร</div>
                     <div className="text-lg font-extrabold text-slate-900 font-['Kanit',sans-serif]">
@@ -305,8 +356,36 @@ export const ProjectsModule: React.FC<ProjectsModuleProps> = ({
                     </div>
                   </div>
 
-                  <div className="p-2 rounded-xl bg-slate-100 text-slate-500">
-                    {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                  <div className="flex items-center gap-1">
+                    {onUpdateProject && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingProject(project);
+                        }}
+                        className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition-colors cursor-pointer"
+                        title="แก้ไขโครงการ"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                    )}
+                    {onDeleteProject && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteProject(project);
+                        }}
+                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
+                        title="ลบโครงการ"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                    <div className="p-2 rounded-xl bg-slate-100 text-slate-500">
+                      {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -427,21 +506,43 @@ export const ProjectsModule: React.FC<ProjectsModuleProps> = ({
                                 )}
                               </td>
                               <td className="p-3 text-center whitespace-nowrap">
-                                <select
-                                  value={act.status}
-                                  onChange={(e) =>
-                                    onUpdateActivityStatus(
-                                      project.id,
-                                      act.id,
-                                      e.target.value as ProjectActivity['status']
-                                    )
-                                  }
-                                  className="text-xs bg-slate-50 border border-slate-200 rounded-md p-1 cursor-pointer"
-                                >
-                                  <option value="pending">รอดำเนินการ</option>
-                                  <option value="in_progress">กำลังดำเนินการ</option>
-                                  <option value="completed">เสร็จสิ้น</option>
-                                </select>
+                                <div className="flex items-center justify-center gap-1">
+                                  <select
+                                    value={act.status}
+                                    onChange={(e) =>
+                                      onUpdateActivityStatus(
+                                        project.id,
+                                        act.id,
+                                        e.target.value as ProjectActivity['status']
+                                      )
+                                    }
+                                    className="text-xs bg-slate-50 border border-slate-200 rounded-md p-1 cursor-pointer"
+                                  >
+                                    <option value="pending">รอดำเนินการ</option>
+                                    <option value="in_progress">กำลังดำเนินการ</option>
+                                    <option value="completed">เสร็จสิ้น</option>
+                                  </select>
+                                  {onUpdateActivity && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setEditingActivity({ projectId: project.id, activity: { ...act } })}
+                                      className="p-1 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-md transition-colors cursor-pointer"
+                                      title="แก้ไขกิจกรรม"
+                                    >
+                                      <Edit2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                  {onDeleteActivity && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteActivity(project.id, act)}
+                                      className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
+                                      title="ลบกิจกรรม"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                </div>
                               </td>
                             </tr>
                           ))

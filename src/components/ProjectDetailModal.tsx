@@ -11,19 +11,27 @@ import {
   BadgeCheck,
   DollarSign,
   Download,
+  Edit2,
+  Trash2,
 } from 'lucide-react';
-import { ProcurementTask } from '../types';
+import { ProcurementTask, SchoolProfile } from '../types';
 
 interface ProjectDetailModalProps {
   task: ProcurementTask | null;
   onClose: () => void;
   onUpdateStatus: (taskId: string, status: ProcurementTask['status'], statusText: string) => void;
+  schoolProfile?: SchoolProfile;
+  onEditTask?: (task: ProcurementTask) => void;
+  onDeleteTask?: (taskId: string) => void;
 }
 
 export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
   task,
   onClose,
   onUpdateStatus,
+  schoolProfile,
+  onEditTask,
+  onDeleteTask,
 }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'memo' | 'order' | 'inspection'>('overview');
 
@@ -45,6 +53,34 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
             <span className="font-mono text-xs text-slate-400">{task.poNumber}</span>
           </div>
           <div className="flex items-center gap-2">
+            {onEditTask && (
+              <button
+                onClick={() => {
+                  onEditTask(task);
+                  onClose();
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-400/30 rounded-lg text-xs font-medium transition-colors cursor-pointer"
+                title="แก้ไขข้อมูลรายการนี้"
+              >
+                <Edit2 className="w-3.5 h-3.5" />
+                <span>แก้ไขรายการ</span>
+              </button>
+            )}
+            {onDeleteTask && (
+              <button
+                onClick={() => {
+                  if (confirm(`คุณต้องการลบรายการ "${task.title}" หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้`)) {
+                    onDeleteTask(task.id);
+                    onClose();
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-200 border border-red-400/30 rounded-lg text-xs font-medium transition-colors cursor-pointer"
+                title="ลบรายการนี้"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>ลบรายการ</span>
+              </button>
+            )}
             <button
               onClick={handlePrint}
               className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-medium transition-colors cursor-pointer"
@@ -54,7 +90,7 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
             </button>
             <button
               onClick={onClose}
-              className="p-1 text-slate-400 hover:text-white rounded-lg"
+              className="p-1 text-slate-400 hover:text-white rounded-lg cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -262,21 +298,21 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                 บันทึกข้อความ
               </div>
               <div className="grid grid-cols-2 text-xs gap-y-1">
-                <div><strong>ส่วนราชการ:</strong> โรงเรียนบ้านนิคมสายโท 12 เหนือ</div>
+                <div><strong>ส่วนราชการ:</strong> {schoolProfile?.schoolName || 'โรงเรียนบ้านนิคมสายโท 12 เหนือ'} {schoolProfile?.districtOffice ? `(${schoolProfile.districtOffice})` : ''}</div>
                 <div><strong>ที่:</strong> ศธ 04052.12/{task.poNumber}</div>
                 <div><strong>วันที่:</strong> {task.dateStr}</div>
                 <div><strong>เรื่อง:</strong> รายงานขอซื้อขอจ้าง ({task.categoryName})</div>
               </div>
               <div className="pt-2 text-xs">
-                <strong>เรียน:</strong> ผู้อำนวยการโรงเรียนบ้านนิคมสายโท 12 เหนือ
+                <strong>เรียน:</strong> {schoolProfile?.directorPosition || 'ผู้อำนวยการ'}{schoolProfile?.schoolName || 'โรงเรียนบ้านนิคมสายโท 12 เหนือ'}
               </div>
               <p className="text-xs text-justify indent-6">
-                ด้วยโรงเรียนบ้านนิคมสายโท 12 เหนือ มีความประสงค์จะดำเนินการ{task.title} เพื่อใช้ในการบริหารงานและการจัดการเรียนการสอนของโรงเรียน โดยมีรายละเอียดตามที่เสนอต่อไปนี้
+                ด้วย{schoolProfile?.schoolName || 'โรงเรียนบ้านนิคมสายโท 12 เหนือ'} มีความประสงค์จะดำเนินการ{task.title} เพื่อใช้ในการบริหารงานและการจัดการเรียนการสอนของสถานศึกษา โดยมีรายละเอียดตามที่เสนอต่อไปนี้
               </p>
               <div className="text-xs space-y-1.5 pl-4">
                 <div>1. <strong>เหตุผลความจำเป็น:</strong> {task.description || 'เพื่อประโยชน์สูงสุดทางการศึกษาและการจัดการเรียนการสอน'}</div>
                 {task.projectName && (
-                  <div>2. <strong>โครงการตามแผนปฏิบัติการ:</strong> {task.projectCode ? `${task.projectCode} ` : ''}{task.projectName} {task.projectOwnerName ? `(เจ้าของโครงการ: ${task.projectOwnerName})` : ''}</div>
+                  <div>2. <strong>โครงการตามแผนปฏิบัติการ:</strong> {task.projectCode ? `${task.projectCode} ` : ''}{task.projectName} {task.projectOwnerName ? `(ผู้รับผิดชอบ/เจ้าของโครงการ: ${task.projectOwnerName})` : ''}</div>
                 )}
                 {task.activityName && (
                   <div>3. <strong>กิจกรรมภายใต้โครงการ:</strong> {task.activityCode ? `${task.activityCode} ` : ''}{task.activityName}</div>
@@ -306,13 +342,18 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                 ใบสั่งซื้อ / สั่งจ้าง (Purchase Order)
               </div>
               <div className="flex justify-between border-b pb-2">
-                <div><strong>ผู้สั่งซื้อ:</strong> โรงเรียนบ้านนิคมสายโท 12 เหนือ</div>
+                <div><strong>ผู้สั่งซื้อ:</strong> {schoolProfile?.schoolName || 'โรงเรียนบ้านนิคมสายโท 12 เหนือ'}</div>
                 <div><strong>เลขที่:</strong> {task.poNumber}</div>
               </div>
               <div className="flex justify-between">
                 <div><strong>ส่งมอบให้:</strong> {task.vendorName}</div>
                 <div><strong>วันที่ออกใบสั่ง:</strong> {task.dateStr}</div>
               </div>
+              {task.projectName && (
+                <div className="text-[11px] text-slate-600 bg-slate-50 p-2 rounded-sm border">
+                  <strong>อ้างอิงโครงการ:</strong> {task.projectCode ? `${task.projectCode} ` : ''}{task.projectName} {task.activityName ? `(กิจกรรม: ${task.activityName})` : ''}
+                </div>
+              )}
               <div className="border border-slate-200 rounded-sm overflow-hidden">
                 <table className="w-full text-left border-collapse">
                   <thead className="bg-slate-100 font-bold border-b">
@@ -347,7 +388,7 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                 ใบตรวจรับพัสดุ / ใบรับรองผลการปฏิบัติงาน
               </div>
               <div className="text-justify indent-6">
-                ตามที่ โรงเรียนบ้านนิคมสายโท 12 เหนือ ได้ตกลงซื้อ/จ้าง {task.title} จาก {task.vendorName} ตามเลขที่ {task.poNumber} นั้น
+                ตามที่ {schoolProfile?.schoolName || 'โรงเรียนบ้านนิคมสายโท 12 เหนือ'} ได้ตกลงซื้อ/จ้าง {task.title} จาก {task.vendorName} ตามเลขที่ {task.poNumber} นั้น
               </div>
               <div className="text-justify indent-6">
                 บัดนี้ คณะกรรมการตรวจรับพัสดุได้ร่วมกันตรวจรับงาน/สิ่งของดังกล่าวเรียบร้อยแล้ว ปรากฏว่า มีปริมาณและคุณภาพถูกต้องครบถ้วนตามรายการที่กำหนด จึงได้รับมอบไว้เพื่อนำไปใช้ประโยชน์ในราชการต่อไป
@@ -369,8 +410,8 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
 
         {/* Footer */}
         <div className="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs">
-          <span className="text-slate-500">
-            ระบบงานพัสดุ ร.ร.บ้านนิคมสายโท 12 เหนือ
+          <span className="text-slate-500 font-medium">
+            ระบบงานพัสดุ {schoolProfile?.schoolName || 'ร.ร.บ้านนิคมสายโท 12 เหนือ'}
           </span>
           <button
             onClick={onClose}

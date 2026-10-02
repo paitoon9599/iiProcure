@@ -7,6 +7,7 @@ interface TopNavProps {
   activeModule: ModuleId;
   fiscalYear: number;
   onFiscalYearChange: (year: number) => void;
+  schoolName?: string;
 }
 
 const MODULE_TITLES: Record<ModuleId, { parent: string; title: string }> = {
@@ -36,6 +37,7 @@ export const TopNav: React.FC<TopNavProps> = ({
   activeModule,
   fiscalYear,
   onFiscalYearChange,
+  schoolName,
 }) => {
   const current = MODULE_TITLES[activeModule] || { parent: 'ภาพรวม', title: 'หน้าแรก' };
 
@@ -79,7 +81,7 @@ export const TopNav: React.FC<TopNavProps> = ({
         {/* School tag */}
         <div className="hidden md:flex items-center gap-1.5 text-xs text-slate-600 bg-slate-100/80 px-2.5 py-1 rounded-lg">
           <School className="w-3.5 h-3.5 text-slate-500" />
-          <span className="font-medium">ร.ร.บ้านนิคมสายโท 12 เหนือ</span>
+          <span className="font-medium truncate max-w-[200px]">{schoolName || 'ร.ร.บ้านนิคมสายโท 12 เหนือ'}</span>
         </div>
 
         {/* User tag */}
