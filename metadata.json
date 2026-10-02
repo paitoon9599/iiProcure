@@ -1,0 +1,6 @@
+{
+  "name": "ระบบงานพัสดุ โรงเรียนบ้านนิคมสายโท 12 เหนือ",
+  "description": "ระบบบริหารจัดการงานพัสดุ จัดซื้อจัดจ้าง ว.804 ว.119 ทะเบียนคุม และคลังวัสดุโรงเรียน",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
