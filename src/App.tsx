@@ -4,10 +4,12 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { ShieldAlert, ArrowRightLeft, Home, Lock } from 'lucide-react';
 import {
   ModuleId,
   ProcurementTask,
   TaskType,
+  ProcurementRole,
   MaterialItem,
   RequisitionSlip,
   BorrowRecord,
@@ -19,6 +21,7 @@ import {
   StaffPersonnel,
   ApprovedProject,
   ProjectActivity,
+  ROLE_DEFINITIONS,
 } from './types';
 import {
   INITIAL_TASKS,
@@ -40,6 +43,8 @@ import { WizardModal } from './components/WizardModal';
 import { FollowUpModal } from './components/FollowUpModal';
 import { ProjectDetailModal } from './components/ProjectDetailModal';
 import { TaskFormModal } from './components/TaskFormModal';
+import { LoginModal } from './components/LoginModal';
+import { RoleBanner } from './components/RoleBanner';
 import { ProcurementModule } from './components/modules/ProcurementModule';
 import { ProcurementRegisterModule } from './components/modules/ProcurementRegisterModule';
 import { W804Module } from './components/modules/W804Module';
@@ -162,6 +167,47 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('nikomsaito_projects', JSON.stringify(projects));
   }, [projects]);
+
+  // Auth & Role State
+  const [currentUser, setCurrentUser] = useState<StaffPersonnel | null>(() => {
+    const saved = localStorage.getItem('nikomsaito_current_user');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        // ignore
+      }
+    }
+    // Default to นายทัศน์พล เจริญสุข (staff-2 - procurement officer)
+    return INITIAL_STAFF[1] || INITIAL_STAFF[0];
+  });
+
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem('nikomsaito_current_user', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('nikomsaito_current_user');
+    }
+  }, [currentUser]);
+
+  const handleLogin = (staff: StaffPersonnel) => {
+    setCurrentUser(staff);
+    setIsLoginModalOpen(false);
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setIsLoginModalOpen(true);
+  };
+
+  const handleQuickSwitchRole = (role: ProcurementRole) => {
+    const found = staffList.find((s) => s.procurementRole === role) || staffList[0];
+    if (found) {
+      setCurrentUser(found);
+    }
+  };
 
   // Modals state
   const [isWizardOpen, setIsWizardOpen] = useState(false);
@@ -528,6 +574,20 @@ export default function App() {
   const overdueCount = borrows.filter((b) => b.status === 'overdue').length;
   const pendingRequisitionCount = requisitions.filter((r) => r.status === 'pending').length;
 
+  // If user is logged out, show the LoginScreen
+  if (!currentUser) {
+    return (
+      <LoginModal
+        isOpen={true}
+        staffList={staffList}
+        schoolProfile={schoolProfile}
+        currentUser={null}
+        onLogin={handleLogin}
+        isFullScreen={true}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#f8f9fa] flex flex-col font-['Sarabun',sans-serif]">
       <div className="flex flex-1 min-h-screen">
@@ -540,6 +600,8 @@ export default function App() {
           overdueCount={overdueCount}
           pendingRequisitionCount={pendingRequisitionCount}
           schoolName={schoolProfile.schoolName}
+          currentUser={currentUser}
+          onOpenLogin={() => setIsLoginModalOpen(true)}
         />
 
         {/* Main Content Area */}
@@ -550,9 +612,19 @@ export default function App() {
             fiscalYear={fiscalYear}
             onFiscalYearChange={(year) => setFiscalYear(year)}
             schoolName={schoolProfile.schoolName}
+            currentUser={currentUser}
+            onOpenLogin={() => setIsLoginModalOpen(true)}
+            onLogout={handleLogout}
           />
 
           <main className="flex-1 p-4 sm:p-6 lg:p-7 max-w-7xl w-full mx-auto">
+            {/* Active User Role Banner with Quick Switch */}
+            <RoleBanner
+              currentUser={currentUser}
+              onOpenSwitchRole={() => setIsLoginModalOpen(true)}
+              onQuickSwitchRole={handleQuickSwitchRole}
+            />
+
             {activeModule === 'home' && (
               <HomeDashboard
                 tasks={tasks}
@@ -565,6 +637,8 @@ export default function App() {
                 onDeleteTask={handleDeleteTask}
                 fiscalYear={fiscalYear}
                 schoolProfile={schoolProfile}
+                currentUser={currentUser}
+                onOpenLogin={() => setIsLoginModalOpen(true)}
               />
             )}
 

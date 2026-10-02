@@ -150,6 +150,90 @@ export interface Department {
 }
 
 // Personnel by Position
+export type ProcurementRole = 'approver' | 'procurement_officer' | 'finance_officer' | 'inspector' | 'teacher';
+
+export interface RoleDefinition {
+  key: ProcurementRole;
+  label: string;
+  shortLabel: string;
+  badgeClass: string;
+  headerBadgeClass: string;
+  description: string;
+  allowedModules: ModuleId[];
+  primaryModules: ModuleId[];
+}
+
+export const ROLE_DEFINITIONS: Record<ProcurementRole, RoleDefinition> = {
+  approver: {
+    key: 'approver',
+    label: 'ผู้อนุมัติ (ผู้อำนวยการโรงเรียน)',
+    shortLabel: 'ผู้อนุมัติ (ผอ.)',
+    badgeClass: 'bg-purple-100 text-purple-800 border-purple-200',
+    headerBadgeClass: 'bg-purple-600 text-white',
+    description: 'มีอำนาจอนุมัติโครงการ อนุมัติการจัดซื้อจัดจ้าง อนุมัติใบเบิกพัสดุ และลงนามในเอกสารราชการ',
+    allowedModules: [
+      'home', 'purchase', 'hire', 'construction', 'procurement_register',
+      'w804', 'w119', 'textbooks', 'quarterly_announcement', 'inventory_ledger',
+      'requisition', 'borrow_return', 'material_report', 'asset_register',
+      'annual_audit', 'projects', 'personnel', 'school_settings', 'backup_restore'
+    ],
+    primaryModules: ['home', 'projects', 'requisition', 'procurement_register', 'quarterly_announcement', 'annual_audit', 'school_settings'],
+  },
+  procurement_officer: {
+    key: 'procurement_officer',
+    label: 'เจ้าหน้าที่พัสดุ',
+    shortLabel: 'จนท.พัสดุ',
+    badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    headerBadgeClass: 'bg-emerald-600 text-white',
+    description: 'รับผิดชอบงานจัดซื้อจัดจ้าง ว.804 ว.119 คุมทะเบียนพัสดุ บัญชีวัสดุ ตัดสต็อก และจัดทำ สขร. 1',
+    allowedModules: [
+      'home', 'purchase', 'hire', 'construction', 'procurement_register',
+      'w804', 'w119', 'textbooks', 'quarterly_announcement', 'inventory_ledger',
+      'requisition', 'borrow_return', 'material_report', 'asset_register',
+      'annual_audit', 'projects', 'personnel', 'school_settings', 'backup_restore'
+    ],
+    primaryModules: ['home', 'purchase', 'hire', 'construction', 'procurement_register', 'w804', 'w119', 'inventory_ledger', 'requisition'],
+  },
+  finance_officer: {
+    key: 'finance_officer',
+    label: 'เจ้าหน้าที่การเงินและบัญชี',
+    shortLabel: 'จนท.การเงิน',
+    badgeClass: 'bg-blue-100 text-blue-800 border-blue-200',
+    headerBadgeClass: 'bg-blue-600 text-white',
+    description: 'ตรวจสอบความถูกต้องของงบประมาณโครงการ ตรวจสอบหลักฐานการจ่ายเงิน และสรุปรายงานการเงิน',
+    allowedModules: [
+      'home', 'procurement_register', 'quarterly_announcement', 'material_report',
+      'projects', 'inventory_ledger', 'textbooks', 'requisition', 'borrow_return', 'backup_restore'
+    ],
+    primaryModules: ['home', 'projects', 'procurement_register', 'quarterly_announcement', 'material_report'],
+  },
+  inspector: {
+    key: 'inspector',
+    label: 'กรรมการตรวจรับพัสดุ',
+    shortLabel: 'กรรมการตรวจรับ',
+    badgeClass: 'bg-amber-100 text-amber-800 border-amber-200',
+    headerBadgeClass: 'bg-amber-600 text-white',
+    description: 'มีหน้าที่ตรวจรับพัสดุให้ถูกต้องตามสัญญา/ใบสั่งซื้อ และทำการตรวจสอบพัสดุประจำปี',
+    allowedModules: [
+      'home', 'procurement_register', 'annual_audit', 'asset_register',
+      'borrow_return', 'purchase', 'hire', 'construction', 'w804', 'w119'
+    ],
+    primaryModules: ['home', 'annual_audit', 'asset_register', 'procurement_register'],
+  },
+  teacher: {
+    key: 'teacher',
+    label: 'ครูผู้สอน / ผู้ขอเบิก',
+    shortLabel: 'ครูผู้ขอเบิก',
+    badgeClass: 'bg-slate-100 text-slate-700 border-slate-200',
+    headerBadgeClass: 'bg-slate-700 text-white',
+    description: 'ขอเบิกวัสดุการศึกษา ยืม-คืนอุปกรณ์การสอน ดูรายการแบบเรียนฟรี 15 ปี และติดตามกิจกรรมโครงการ',
+    allowedModules: [
+      'home', 'requisition', 'borrow_return', 'textbooks', 'projects'
+    ],
+    primaryModules: ['home', 'requisition', 'borrow_return', 'textbooks'],
+  },
+};
+
 export interface StaffPersonnel {
   id: string;
   staffCode: string; // เช่น บุคลากร-001
@@ -159,10 +243,12 @@ export interface StaffPersonnel {
   academicStanding?: string; // วิทยฐานะ (ชำนาญการ / ชำนาญการพิเศษ / เชี่ยวชาญ)
   departmentId: string;
   departmentName: string;
-  procurementRole: 'approver' | 'procurement_officer' | 'finance_officer' | 'inspector' | 'teacher';
+  procurementRole: ProcurementRole;
   phone: string;
   email: string;
   active: boolean;
+  avatarUrl?: string;
+  password?: string;
 }
 
 // Approved School Strategic Projects & Activities

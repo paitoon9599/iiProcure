@@ -19,8 +19,11 @@ import {
   FolderKanban,
   Users,
   School,
+  ArrowRightLeft,
+  UserCheck,
+  Lock,
 } from 'lucide-react';
-import { ModuleId } from '../types';
+import { ModuleId, StaffPersonnel, ROLE_DEFINITIONS } from '../types';
 
 interface SidebarProps {
   activeModule: ModuleId;
@@ -30,6 +33,8 @@ interface SidebarProps {
   overdueCount?: number;
   pendingRequisitionCount?: number;
   schoolName?: string;
+  currentUser?: StaffPersonnel | null;
+  onOpenLogin?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -40,6 +45,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   overdueCount = 2,
   pendingRequisitionCount = 1,
   schoolName,
+  currentUser,
+  onOpenLogin,
 }) => {
   const sections = [
     {
@@ -152,29 +159,55 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {sec.items.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeModule === item.id;
+                const isAllowed = currentUser
+                  ? ROLE_DEFINITIONS[currentUser.procurementRole].allowedModules.includes(item.id)
+                  : true;
+                const isPrimary = currentUser
+                  ? ROLE_DEFINITIONS[currentUser.procurementRole].primaryModules.includes(item.id)
+                  : false;
+
                 return (
                   <button
                     key={item.id}
                     onClick={() => handleItemClick(item.id)}
-                    className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl font-medium transition-colors ${
+                    className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl font-medium transition-colors cursor-pointer ${
                       isActive
                         ? 'bg-[#e7eee7] text-[#166534]'
-                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                        : isAllowed
+                        ? 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                        : 'text-slate-400 hover:bg-slate-50/80 hover:text-slate-600'
                     }`}
+                    title={!isAllowed ? `จำกัดสิทธิ์เฉพาะบางบทบาท (คลิกเพื่อดูรายละเอียด)` : undefined}
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#166534]' : 'text-slate-500'}`} />
-                      <span className="truncate">{item.label}</span>
-                    </div>
-                    {item.badge !== undefined && item.badge > 0 && (
-                      <span
-                        className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                          item.badgeColor || 'bg-amber-100 text-amber-800'
+                      <Icon
+                        className={`w-4 h-4 shrink-0 ${
+                          isActive
+                            ? 'text-[#166534]'
+                            : isAllowed
+                            ? 'text-slate-500'
+                            : 'text-slate-400'
                         }`}
-                      >
-                        {item.badge}
-                      </span>
-                    )}
+                      />
+                      <span className="truncate">{item.label}</span>
+                      {!isAllowed && (
+                        <Lock className="w-3 h-3 text-slate-400 shrink-0 ml-0.5" />
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {isPrimary && !isActive && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" title="งานหลักตามบทบาท" />
+                      )}
+                      {item.badge !== undefined && item.badge > 0 && (
+                        <span
+                          className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                            item.badgeColor || 'bg-amber-100 text-amber-800'
+                          }`}
+                        >
+                          {item.badge}
+                        </span>
+                      )}
+                    </div>
                   </button>
                 );
               })}
@@ -182,11 +215,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
           ))}
         </div>
 
-        {/* Footer Item: สำรองข้อมูล */}
-        <div className="p-3 border-t border-slate-100">
+        {/* Footer Items */}
+        <div className="p-3 border-t border-slate-100 space-y-2 bg-white">
           <button
             onClick={() => handleItemClick('backup_restore')}
-            className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-[13.5px] font-medium transition-colors ${
+            className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-[13.5px] font-medium transition-colors cursor-pointer ${
               activeModule === 'backup_restore'
                 ? 'bg-[#e7eee7] text-[#166534]'
                 : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
@@ -195,6 +228,40 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <DownloadCloud className="w-4 h-4 text-slate-500" />
             <span>สำรองข้อมูล</span>
           </button>
+
+          {/* User Role Card */}
+          {currentUser && (
+            <div className="pt-2 border-t border-slate-100">
+              <div
+                onClick={onOpenLogin}
+                className="p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/80 cursor-pointer transition-all group"
+                title="คลิกเพื่อสลับบทบาทหน้าที่"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-7 h-7 rounded-full bg-slate-800 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                      {currentUser.fullName.slice(0, 1)}
+                    </div>
+                    <div className="min-w-0 text-left">
+                      <div className="font-semibold text-slate-900 text-xs truncate">
+                        {currentUser.title}{currentUser.fullName}
+                      </div>
+                      <div className="text-[10px] text-slate-500 truncate">
+                        {currentUser.position}
+                      </div>
+                    </div>
+                  </div>
+                  <ArrowRightLeft className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-600 shrink-0 ml-1" />
+                </div>
+                <div className="mt-2 flex items-center justify-between text-[10px]">
+                  <span className="text-slate-400">บทบาท:</span>
+                  <span className={`font-bold px-1.5 py-0.5 rounded-md border ${ROLE_DEFINITIONS[currentUser.procurementRole].badgeClass}`}>
+                    {ROLE_DEFINITIONS[currentUser.procurementRole].shortLabel}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </aside>
     </>

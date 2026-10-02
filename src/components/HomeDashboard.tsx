@@ -21,7 +21,7 @@ import {
   Trash2,
   Sparkles,
 } from 'lucide-react';
-import { ModuleId, ProcurementTask, TaskType, SchoolProfile } from '../types';
+import { ModuleId, ProcurementTask, TaskType, SchoolProfile, StaffPersonnel, ROLE_DEFINITIONS } from '../types';
 
 interface HomeDashboardProps {
   tasks: ProcurementTask[];
@@ -31,6 +31,8 @@ interface HomeDashboardProps {
   onSelectTask: (task: ProcurementTask) => void;
   fiscalYear: number;
   schoolProfile?: SchoolProfile;
+  currentUser?: StaffPersonnel | null;
+  onOpenLogin?: () => void;
   onEditTask?: (task: ProcurementTask) => void;
   onDeleteTask?: (taskId: string) => void;
   onAddNewTask?: () => void;
@@ -44,6 +46,8 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
   onSelectTask,
   fiscalYear,
   schoolProfile,
+  currentUser,
+  onOpenLogin,
   onEditTask,
   onDeleteTask,
   onAddNewTask,
@@ -139,9 +143,18 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
           <div className="text-[13px] text-slate-500 font-normal">
             วันพฤหัสบดีที่ 1 ตุลาคม {fiscalYear}
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight font-['Kanit',sans-serif] mt-0.5">
-            สวัสดีครับ ครูทัศน์พล
-          </h1>
+          <div className="flex items-center gap-2 flex-wrap mt-0.5">
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight font-['Kanit',sans-serif]">
+              สวัสดี{currentUser?.title?.includes('นาย') ? 'ครับ' : 'ค่ะ'} {currentUser ? `${currentUser.title}${currentUser.fullName}` : 'คุณครู'}
+            </h1>
+            {currentUser && (
+              <span
+                className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${ROLE_DEFINITIONS[currentUser.procurementRole].badgeClass}`}
+              >
+                {ROLE_DEFINITIONS[currentUser.procurementRole].label}
+              </span>
+            )}
+          </div>
           <p className="text-sm text-slate-500 font-medium">
             {schoolProfile?.schoolName || 'โรงเรียนบ้านนิคมสายโท 12 เหนือ'}
             {schoolProfile?.districtOffice ? ` • ${schoolProfile.districtOffice}` : ''}
@@ -149,6 +162,15 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          {onOpenLogin && (
+            <button
+              onClick={onOpenLogin}
+              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-full font-medium text-[13px] transition-colors cursor-pointer"
+              title="สลับบทบาทหน้าที่"
+            >
+              <span>สลับบทบาท</span>
+            </button>
+          )}
           {onAddNewTask && (
             <button
               onClick={onAddNewTask}
